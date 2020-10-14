@@ -1,0 +1,10 @@
+paper
+paperpack
+papercup
+can
+bottle
+pet
+plastic
+vinyl
+cap
+label
