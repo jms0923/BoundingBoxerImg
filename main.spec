@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['D:\\Project\\boundingbox-gui'],
+             pathex=['D:\\Project\\BoundingBoxerImg'],
              binaries=[],
              datas=[],
              hiddenimports=[],
