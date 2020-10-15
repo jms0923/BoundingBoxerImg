@@ -232,19 +232,31 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
         listview_index = self.model_bounding_boxes.index(index, 0)
         self.list_view_bounding_boxes.selectionModel().select(listview_index, QtCore.QItemSelectionModel.ClearAndSelect)
         self.list_view_bounding_boxes.setCurrentIndex(listview_index)
-
+        
+    def select_list_view_images_index(self, index):
+        if index < 0 or index >= len(self.image_view_list): return
+        listview_image_index = self.model_images.index(index, 0)
+        self.list_view_images.selectionModel().select(listview_image_index, QtCore.QItemSelectionModel.ClearAndSelect)
+        self.list_view_images.setCurrentIndex(listview_image_index)
+        
     def eventFilter(self, QObject, event):
         if QObject == self.line_edit_label:
             if event.type() == QtCore.QEvent.KeyPress:
                 keyevent = QtGui.QKeyEvent(event)
                 if keyevent.key() == QtCore.Qt.Key_Delete:
                     self.delete_current_bounding_box()
-                elif keyevent.key() == QtCore.Qt.Key_Up:
+                elif keyevent.key() == QtCore.Qt.Key_PageUp:
                     index = self.list_view_bounding_boxes.currentIndex().row()
                     self.select_bounding_box_index(index - 1)
-                elif keyevent.key() == QtCore.Qt.Key_Down:
+                elif keyevent.key() == QtCore.Qt.Key_PageDown:
                     index = self.list_view_bounding_boxes.currentIndex().row()
                     self.select_bounding_box_index(index + 1)
+                elif keyevent.key() == QtCore.Qt.Key_Up:
+                    index = self.list_view_images.currentIndex().row()
+                    self.select_list_view_images_index(index - 1)
+                elif keyevent.key() == QtCore.Qt.Key_Down:
+                    index = self.list_view_images.currentIndex().row()
+                    self.select_list_view_images_index(index + 1)
                     
         return super().eventFilter(QObject, event)
 
