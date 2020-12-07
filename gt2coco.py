@@ -1,6 +1,9 @@
 import os
 import json
 from collections import OrderedDict
+
+from PyQt5.QtCore import Qt
+
 import img2json
 import copy
 import cv2
@@ -164,10 +167,9 @@ def bbox2json(txtPath, jsonPath, jpgPath):
     print("save json")
     saveJson(jsonPath, jsonOrigin)
 
-
 def cocoExport(baseDir, classList):
     global labelIdx
-    labelIdx = dict.fromkeys(classList, 1)
+    labelIdx = {label:i+1 for i, label in enumerate(classList)}
 
     jpgPath = baseDir
     txtPath = os.path.join(baseDir, 'gt')
@@ -183,29 +185,3 @@ def cocoExport(baseDir, classList):
     print("end")
 
 
-if __name__ == '__main__':
-    # train
-    txtPath = "D:\AIGrandChallenge\\2cha\\2cha_train\padding\save_gt"
-    jpgPath = "D:\AIGrandChallenge\\2cha\\2cha_train\padding\save_img"
-    savePath = "D:\AIGrandChallenge\\2cha\\2cha_train\padding\\"
-    jsonName = "instances_train2017"
-    print("convert images to annotation file")
-    img2json.main(txtPath, jpgPath, savePath, jsonName)
-
-    jsonPath = savePath + jsonName + ".json"
-    print("convert bbox to annotation file")
-    bbox2json(txtPath, jsonPath, jpgPath)
-    print("end")
-
-    # val
-    # txtPath = "./trash/28/val/gt/"
-    # jpgPath = "./trash/28/val/img/"
-    # savePath = "./trash/28/"
-    # jsonName = "instances_val2017"    # "instances_val2017"
-    # print("convert images to annotation file")
-    # img2json.main(txtPath, jpgPath, savePath, jsonName)
-    #
-    # jsonPath = savePath + jsonName + ".json"
-    # print("convert bbox to annotation file")
-    # bbox2json(txtPath, jsonPath)
-    # print("end")

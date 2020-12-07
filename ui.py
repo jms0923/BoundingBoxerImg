@@ -111,9 +111,15 @@ class Ui_MainWindow(object):
         self.line_edit_y3 = QtWidgets.QLineEdit(self.frame)
         self.line_edit_y3.setGeometry(QtCore.QRect(740, 130, 71, 21))
         self.line_edit_y3.setObjectName("line_edit_y3")
+
         self.check_box_selection_mode = QtWidgets.QCheckBox(self.frame)
         self.check_box_selection_mode.setGeometry(QtCore.QRect(1040, 175, 81, 21))
         self.check_box_selection_mode.setObjectName("check_box_selection_mode")
+
+        self.check_box_modify_mode = QtWidgets.QCheckBox(self.frame)
+        self.check_box_modify_mode.setGeometry(QtCore.QRect(1040, 155, 81, 21))
+        self.check_box_modify_mode.setObjectName("check_box_modify_mode")
+
         self.horizontalLayout_1.addWidget(self.frame)
         self.verticalLayout_4.addLayout(self.horizontalLayout_1)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
@@ -144,6 +150,8 @@ class Ui_MainWindow(object):
         self.label_4.setText(_translate("MainWindow", "Points"))
         self.label_3.setText(_translate("MainWindow", "y"))
         self.check_box_selection_mode.setText(_translate("MainWindow", "선택모드"))
+        self.check_box_modify_mode.setText(_translate("MainWindow", "수정모드"))
+
 
 from graphicsview import GraphicsView
 

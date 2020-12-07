@@ -1,8 +1,11 @@
 import sys, os, re
 from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
 
 from gt2coco import cocoExport
 import ui
+
 
 class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
@@ -24,7 +27,10 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
         self.line_edit_x3.returnPressed.connect(self.modify_current_bounding_box)
         self.line_edit_y3.returnPressed.connect(self.modify_current_bounding_box)
         self.line_edit_label.returnPressed.connect(self.modify_current_bounding_box)
+
         self.check_box_selection_mode.clicked.connect(self.selection_mode_changed)
+        self.check_box_modify_mode.clicked.connect(self.modify_mode_changed)
+
         self.model_images = QtGui.QStandardItemModel()
         self.list_view_images.setModel(self.model_images)
         self.list_view_images.selectionModel().currentRowChanged.connect(self.image_selected)
@@ -35,6 +41,7 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
 
         self.model_classes = QtGui.QStandardItemModel()
         self.list_view_classes.setModel(self.model_classes)
+        # self.list_view_classes.selectionModel().currentChanged.connect(self.edit_class)
 
         self.graphics_scene = GraphicsScene(self.graphics_view)
         self.graphics_view.setScene(self.graphics_scene)
@@ -95,7 +102,7 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
 
     def class_view_init(self):
         for idx, cls in enumerate(self.classes):
-            explan = 'F' + str(idx+1) + ' / ' + cls
+            explan = 'F' + str(idx) + ' / ' + cls
             self.model_classes.appendRow(QtGui.QStandardItem(explan))
 
     def cocoExport(self):
@@ -162,6 +169,7 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
         self.model_bounding_boxes.removeRow(index)
         del self.bounding_boxes[index]
         self.graphics_scene.remove_poly(index)
+
         self.save_gt()
 
     def bounding_box_selected(self):
@@ -191,6 +199,31 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
             
         self.line_edit_label.setFocus()
 
+    def modify_mouse_bounding_box(self, poly, index, label):
+        index = self.list_view_bounding_boxes.currentIndex().row()
+        bbs = [int(poly[0].x()), int(poly[0].y()),
+                  int(poly[1].x()), int(poly[1].y()),
+                  int(poly[2].x()), int(poly[2].y()),
+                  int(poly[3].x()), int(poly[3].y()),]
+
+        self.line_edit_x0.setText(str(int(poly[0].x())))
+        self.line_edit_y0.setText(str(int(poly[0].y())))
+        self.line_edit_x1.setText(str(int(poly[1].x())))
+        self.line_edit_y1.setText(str(int(poly[1].y())))
+        self.line_edit_x2.setText(str(int(poly[2].x())))
+        self.line_edit_y2.setText(str(int(poly[2].y())))
+        self.line_edit_x3.setText(str(int(poly[3].x())))
+        self.line_edit_y3.setText(str(int(poly[3].y())))
+
+        label = label.toPlainText()
+        self.bounding_boxes[index] = (bbs, label)
+        item = self.model_bounding_boxes.itemFromIndex(self.list_view_bounding_boxes.currentIndex())   #
+        item.setText("{},{}".format(','.join((str(bb) for bb in bbs)), label))
+        self.graphics_scene.modify_poly(index, bbs, label)
+        self.save_gt()
+        self.graphics_scene.move_label(index, bbs[:2])
+        self.select_bounding_box_index(index)
+
     def modify_current_bounding_box(self):
         index = self.list_view_bounding_boxes.currentIndex().row()
         if index < 0: return
@@ -207,11 +240,15 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
         item = self.model_bounding_boxes.itemFromIndex(self.list_view_bounding_boxes.currentIndex())
         item.setText("{},{}".format(','.join((str(bb) for bb in bbs)), label))
         self.graphics_scene.modify_poly(index, bbs, label)
+        self.graphics_scene.move_label(index, bbs[:2])
         self.save_gt()
         self.select_bounding_box_index(index + 1)
 
     def selection_mode_changed(self, checked):
         self.graphics_scene.selection_mode = checked
+
+    def modify_mode_changed(self, checked):
+        self.graphics_scene.modify_mode = checked
 
     def shortCutAction(self, key):
         idx = self.shortCut.index(key)
@@ -232,32 +269,20 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
         listview_index = self.model_bounding_boxes.index(index, 0)
         self.list_view_bounding_boxes.selectionModel().select(listview_index, QtCore.QItemSelectionModel.ClearAndSelect)
         self.list_view_bounding_boxes.setCurrentIndex(listview_index)
-        
-    def select_list_view_images_index(self, index):
-        if index < 0 or index >= len(self.image_view_list): return
-        listview_image_index = self.model_images.index(index, 0)
-        self.list_view_images.selectionModel().select(listview_image_index, QtCore.QItemSelectionModel.ClearAndSelect)
-        self.list_view_images.setCurrentIndex(listview_image_index)
-        
+
     def eventFilter(self, QObject, event):
         if QObject == self.line_edit_label:
             if event.type() == QtCore.QEvent.KeyPress:
                 keyevent = QtGui.QKeyEvent(event)
                 if keyevent.key() == QtCore.Qt.Key_Delete:
                     self.delete_current_bounding_box()
-                elif keyevent.key() == QtCore.Qt.Key_PageUp:
+                elif keyevent.key() == QtCore.Qt.Key_Up:
                     index = self.list_view_bounding_boxes.currentIndex().row()
                     self.select_bounding_box_index(index - 1)
-                elif keyevent.key() == QtCore.Qt.Key_PageDown:
+                elif keyevent.key() == QtCore.Qt.Key_Down:
                     index = self.list_view_bounding_boxes.currentIndex().row()
                     self.select_bounding_box_index(index + 1)
-                elif keyevent.key() == QtCore.Qt.Key_Up:
-                    index = self.list_view_images.currentIndex().row()
-                    self.select_list_view_images_index(index - 1)
-                elif keyevent.key() == QtCore.Qt.Key_Down:
-                    index = self.list_view_images.currentIndex().row()
-                    self.select_list_view_images_index(index + 1)
-                    
+
         return super().eventFilter(QObject, event)
 
 
@@ -272,9 +297,13 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         self.current_poly_size = None
         self.current_focused = None
         self.current_focused_label = None
+        self.current_focused_idex = None
+        self.current_modified_item = None
+        self.shift_mode = False
         self.current_horizontal_line = None
         self.current_vertical_line = None
         self.selection_mode = False
+        self.modify_mode = False
 
     def clear(self):
         self.poly_list.clear()
@@ -286,6 +315,10 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         self.current_horizontal_line = None
         self.current_vertical_line = None
         return super().clear()
+
+    def move_label(self, index, points):
+        self.label_list[index].setX(points[0] - 5)
+        self.label_list[index].setY(points[1] - 30)
 
     def labelMaker(self, points, label):
         labelItem = QtWidgets.QGraphicsTextItem(label)
@@ -314,6 +347,7 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         points = [QtCore.QPointF(points[2 * x], points[2 * x + 1]) for x in range(0, 4)]
         self.poly_list[index].setPolygon(QtGui.QPolygonF(points))
         self.label_list[index].setPlainText(label)
+        self.set_bounding_box_focused(index)
 
     def set_bounding_box_focused(self, index):
         if self.current_focused:
@@ -323,10 +357,13 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         self.label_list[index].setDefaultTextColor(QtGui.QColor('red'))
         self.current_focused = self.poly_list[index]
         self.current_focused_label = self.label_list[index]
+        self.current_focused_idex = index
         self.update()
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton and not self.current_poly and not self.selection_mode:
+        modifierPressed = QApplication.keyboardModifiers()
+
+        if event.button() == QtCore.Qt.LeftButton and not self.current_poly and not self.selection_mode and not self.modify_mode:
             self.current_poly_begin = event.scenePos()
             r = QtCore.QRectF(self.current_poly_begin, self.current_poly_begin)
             self.current_poly = self.addPolygon(QtGui.QPolygonF(r), pen=QtGui.QPen(QtCore.Qt.green, 1.5))
@@ -335,29 +372,71 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             self.current_poly_size.setPos(event.scenePos() - QtCore.QPointF(0, 11))
             self.current_poly_size.setBrush(QtGui.QBrush(QtCore.Qt.gray))
 
-        if event.button() == QtCore.Qt.LeftButton and self.selection_mode:
+        if event.button() == QtCore.Qt.LeftButton and self.selection_mode and not self.modify_mode:
             items = self.items(event.scenePos())
             for item in items:
                 if item in self.poly_list:
                     self.window.select_bounding_box_index(self.poly_list.index(item))
                     break
 
+        if (event.buttons() & QtCore.Qt.LeftButton) and (modifierPressed & Qt.ShiftModifier) != Qt.ShiftModifier and self.modify_mode and not self.selection_mode:
+            items = self.items(event.scenePos())
+            for item in items:
+                if item in self.poly_list:
+                    self.window.select_bounding_box_index(self.poly_list.index(item))
+                    self.current_modified_item = item
+                    break
+
+        if (event.buttons() & QtCore.Qt.LeftButton) and (modifierPressed & Qt.ShiftModifier) == Qt.ShiftModifier and self.modify_mode and not self.selection_mode:
+            if self.current_modified_item:
+                self.shift_mode = True
+                self.current_poly = self.current_modified_item
+
+                self.current_poly_begin = self.calculate_poly_begin(event.scenePos(), self.current_focused.polygon().boundingRect())
+                self.current_poly_size = self.addSimpleText("(0 x 0)")
+
         return super().mousePressEvent(event)
 
+    def calculate_poly_begin(self, nowPosition, boundingRect):
+        # now left top => right bottom
+        if boundingRect.center().x() > nowPosition.x() and boundingRect.center().y() > nowPosition.y():
+            poly_begin = QtCore.QPointF(boundingRect.bottomRight())
+        # now right top => left bottom
+        elif boundingRect.center().x() < nowPosition.x() and boundingRect.center().y() > nowPosition.y():
+            poly_begin = QtCore.QPointF(boundingRect.bottomLeft())
+        # now right bottom => return left top
+        elif boundingRect.center().x() < nowPosition.x() and boundingRect.center().y() < nowPosition.y():
+            poly_begin = QtCore.QPointF(boundingRect.topLeft())
+        # now left bottom => right top
+        else:
+            poly_begin = QtCore.QPointF(boundingRect.topRight())
+
+        return poly_begin
+
+
     def mouseMoveEvent(self, event):
-        if event.buttons() & QtCore.Qt.LeftButton and self.current_poly and not self.selection_mode:
+        modifierPressed = QApplication.keyboardModifiers()
+        Mmodo = QApplication.mouseButtons()
+
+        if event.buttons() & QtCore.Qt.LeftButton and self.current_poly and not self.selection_mode and not self.modify_mode:
             r = QtCore.QRectF(self.current_poly_begin, event.scenePos()).normalized()
             self.current_poly.setPolygon(QtGui.QPolygonF(r))
-
             self.current_poly_size.setPos(event.scenePos() - QtCore.QPointF(0, 11))
             self.current_poly_size.setText(f"({int(r.width())} x {int(r.height())})")
 
-        if event.buttons() & QtCore.Qt.RightButton:
+        if (event.buttons() & QtCore.Qt.RightButton) and not (event.buttons() & QtCore.Qt.LeftButton):
             delta = event.lastScreenPos() - event.screenPos()
             x = self.view.horizontalScrollBar().value() + delta.x()
             y = self.view.verticalScrollBar().value() + delta.y()
             self.view.horizontalScrollBar().setValue(x)
             self.view.verticalScrollBar().setValue(y)
+
+        #  and
+        if (bool(Mmodo == QtCore.Qt.LeftButton)) and (bool(modifierPressed == Qt.ShiftModifier)) and self.current_poly and self.shift_mode and self.modify_mode and not self.selection_mode:
+            r = QtCore.QRectF(self.current_poly_begin, event.scenePos()).normalized()
+            self.current_poly.setPolygon(QtGui.QPolygonF(r))
+            self.current_poly_size.setPos(event.scenePos() - QtCore.QPointF(0, 11))
+            self.current_poly_size.setText(f"({int(r.width())} x {int(r.height())})")
 
         x = event.scenePos().x()
         y = event.scenePos().y()
@@ -382,14 +461,21 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton and self.current_poly and not self.selection_mode:
+        if event.button() == QtCore.Qt.LeftButton and self.current_poly and not self.selection_mode and not self.modify_mode:
             self.poly_list.append(self.current_poly)
             self.labelMaker([0, 0], '')
             self.window.poly_added(self.current_poly.polygon())
             self.current_poly = None
-
             self.removeItem(self.current_poly_size)
             del self.current_poly_size
+
+        if event.button() == QtCore.Qt.LeftButton and self.current_poly and self.shift_mode and self.modify_mode and not self.selection_mode:
+            self.window.modify_mouse_bounding_box(self.current_poly.polygon(), self.current_focused_idex, self.current_focused_label)
+            self.current_poly = None
+            if self.current_poly_size:
+                self.removeItem(self.current_poly_size)
+                del self.current_poly_size
+            self.shift_mode = False
 
         return super().mouseReleaseEvent(event)
 
