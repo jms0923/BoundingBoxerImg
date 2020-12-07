@@ -102,7 +102,7 @@ class MainWindow(QtWidgets.QMainWindow, ui.Ui_MainWindow):
 
     def class_view_init(self):
         for idx, cls in enumerate(self.classes):
-            explan = 'F' + str(idx) + ' / ' + cls
+            explan = 'F' + str(idx+1) + ' / ' + cls
             self.model_classes.appendRow(QtGui.QStandardItem(explan))
 
     def cocoExport(self):
