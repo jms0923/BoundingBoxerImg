@@ -8,3 +8,4 @@ plastic
 vinyl
 cap
 label
+label_paper
