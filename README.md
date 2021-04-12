@@ -5,3 +5,6 @@
 
 ### Download release
 * [v 1.2](https://github.com/jms0923/BoundingBoxerImg/releases/tag/v1.2 "releases v1.2")
+
+Option Key
+Shift
